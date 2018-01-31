@@ -1,0 +1,13 @@
+---
+- import_playbook: user.yml
+  tags:
+    - user
+
+- import_playbook: yum.yml
+  tags:
+    - yum
+
+- import_playbook: ssh.yml
+  tags:
+    - ssh
+

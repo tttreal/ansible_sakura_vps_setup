@@ -1,0 +1,35 @@
+---
+- hosts: all
+  vars_files:
+    - ../vars.yml
+  become: yes
+  tasks:
+    - name: create user admin
+      user:
+        name: "{{ user_admin_name }}"
+        password: "{{ user_admin_password }}"
+        state: present
+        generate_ssh_key: yes
+        group: "{{ user_admin_group }}"
+
+    - name: edit sudoers file
+      lineinfile:
+        dest: /etc/sudoers
+        backup: yes
+        state: present
+        # string to search
+        regexp: "{{ item.regexp }}"
+        # string to replace
+        line: "{{ item.line }}"
+        # unchange if regexp doesn't match
+        backrefs: yes
+      with_items:
+        - {
+          regexp: '^# %wheel\s*ALL=\(ALL\)\s*NOPASSWD: ALL',
+          line: '%wheel	ALL=(ALL)	NOPASSWD: ALL'
+        }
+        - {
+          regexp: '^%wheel\s*ALL=\(ALL\)\s*ALL',
+          line: '# %wheel	ALL=(ALL)	ALL'
+        }
+

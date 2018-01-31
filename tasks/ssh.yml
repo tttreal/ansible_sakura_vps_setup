@@ -1,0 +1,94 @@
+---
+- hosts: all
+  vars_files:
+    - ../vars.yml
+  become: yes
+  tasks:
+    - name: set authorized_keys -- touch .ssh/authorized_keys
+      file:
+        path: "{{ user_admin_authorized_keys_path }}"
+        owner: "{{ user_admin_name }}"
+        group: "{{ user_admin_group }}"
+        state: touch
+        mode: 0600
+      changed_when: False
+
+    - name: set authorized_keys -- add id_rsa.pub string
+      blockinfile:
+        path: "{{ user_admin_authorized_keys_path }}"
+        backup: yes
+        block: "{{ local_id_rsa_pub_string }}"
+
+    - name: edit /etc/ssh/sshd_config
+      lineinfile:
+        dest: /etc/ssh/sshd_config
+        backup: yes
+        state: present
+        # string to search
+        regexp: "{{ item.regexp }}"
+        # string to replace
+        line: "{{ item.line }}"
+        # unchange if regexp doesn't match
+        backrefs: yes
+      with_items:
+        - {
+          regexp: '^#Port 22',
+          line: 'Port {{ ssh_port }}'
+        }
+        - {
+          regexp: '#PermitRootLogin yes',
+          line: 'PermitRootLogin no'
+        }
+        - {
+          regexp: 'PasswordAuthentication yes',
+          line: 'PasswordAuthentication no'
+        }
+
+    - name: firewall open
+      firewalld:
+        service: "{{ item }}"
+        permanent: true
+        state: enabled
+      with_items:
+        - ssh
+
+    - name: copy ssh.xml(firewalld)
+      copy:
+        # The src file is located at remote
+        remote_src: yes
+        src: "{{ firewalld_ssh_xml_file_path_original }}"
+        dest: "{{ firewalld_ssh_xml_file_path_etc }}"
+        force: no
+      notify: restart sshd
+
+    - name: change ssh.xml
+      lineinfile:
+        dest: "{{ firewalld_ssh_xml_file_path_etc }}"
+        backup: yes
+        state: present
+        # string to search
+        regexp: "{{ item.regexp }}"
+        # string to replace
+        line: "{{ item.line }}"
+        # unchange if regexp doesn't match
+        backrefs: yes
+      with_items:
+        - {
+          regexp: '^  <port protocol="tcp" port="22"/>',
+          line: '  <port protocol="tcp" port="{{ ssh_port }}"/>'
+        }
+      notify: restart sshd
+
+    - name: restart firewalld
+      service:
+        name: firewalld
+        state: restarted
+
+  handlers:
+    - name: restart sshd
+      service:
+        name: sshd
+        state: restarted
+
+
+

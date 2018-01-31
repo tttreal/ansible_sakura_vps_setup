@@ -1,0 +1,12 @@
+---
+user_admin_name: xxx
+user_admin_password: xxx
+user_admin_group: xxx
+user_admin_authorized_keys_path: xxx
+local_id_rsa_pub_string: xxx
+
+ssh_port: xxx
+
+firewalld_ssh_xml_file_path_original: xxx
+firewalld_ssh_xml_file_path_etc: xxx
+
